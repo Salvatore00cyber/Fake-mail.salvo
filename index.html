@@ -1,0 +1,282 @@
+<!DOCTYPE html><html lang="ar"><head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>temp mail free </title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(-45deg, #ee7752, #e73c7e, #23a6d5, #23d5ab);
+            background-size: 400% 400%;
+            animation: gradient 15s ease infinite;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            overflow: hidden;
+            color: #fff;
+            text-align: center;
+            transform: scale(0.8); /* تصغير المحتوى بنسبة 80% */
+        }
+
+        @keyframes gradient {
+            0% {
+                background-position: 0% 50%;
+            }
+            50% {
+                background-position: 100% 50%;
+            }
+            100% {
+                background-position: 0% 50%;
+            }
+        }
+
+        h1, h2 {
+            margin: 10px 0;
+        }
+
+        #current-email {
+            font-size: 1.4em;
+            color: #ffeb3b;
+            margin: 10px 0;
+        }
+
+        button, select {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 8px 16px; /* تصغير البادينغ */
+            font-size: 0.8em; /* تصغير حجم الخط */
+            cursor: pointer;
+            border-radius: 20px;
+            transition: background-color 0.3s ease;
+            margin: 5px;
+        }
+
+        button:hover, select:hover {
+            background-color: #0056b3;
+        }
+
+        .box {
+            background-color: rgba(255, 255, 255, 0.2);
+            padding: 16px; /* تصغير البادينغ */
+            border-radius: 8px; /* تصغير الحدود الدائرية */
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+            text-align: center;
+            width: 80%;
+            max-width: 400px; /* تصغير العرض الأقصى */
+            margin-bottom: 16px; /* تصغير المارجن السفلي */
+        }
+
+        .footer {
+            margin-top: 16px; /* تصغير المارجن العلوي */
+            text-align: center;
+            font-size: 0.8em; /* تصغير حجم الخط */
+        }
+
+        .message-container {
+            overflow-y: auto;
+            max-height: 50vh;
+            width: 80%;
+            max-width: 640px; /* تصغير العرض الأقصى */
+            background-color: rgba(255, 255, 255, 0.1);
+            padding: 16px; /* تصغير البادينغ */
+            border-radius: 8px; /* تصغير الحدود الدائرية */
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .message {
+            background-color: rgba(255, 255, 255, 0.2);
+            margin: 8px 0; /* تصغير المارجن */
+            padding: 16px; /* تصغير البادينغ */
+            border-radius: 8px; /* تصغير الحدود الدائرية */
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            word-wrap: break-word;
+        }
+
+        .message strong {
+            color: #ffeb3b;
+        }
+
+        .message a {
+            color: #ffeb3b;
+            text-decoration: none;
+        }
+
+        .message a:hover {
+            text-decoration: underline;
+        }
+    </style>
+    <script>
+        async function fetchDomains() {
+            const domainResponse = await fetch('https://api.mail.tm/domains');
+            const domainsData = await domainResponse.json();
+            const domains = domainsData['hydra:member'];
+            const domainSelect = document.getElementById('domain');
+            domains.forEach(domain => {
+                const option = document.createElement('option');
+                option.value = domain.domain;
+                option.text = domain.domain;
+                domainSelect.appendChild(option);
+            });
+        }
+
+        async function getTempEmail() {
+            try {
+                const domainSelect = document.getElementById('domain');
+                const domain = domainSelect.value;
+
+                const username = Math.random().toString(36).substring(2, 12);
+                const email = `${username}@${domain}`;
+                document.getElementById('current-email').innerText = email;
+
+                await fetch('https://api.mail.tm/accounts', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        address: email,
+                        password: 'password'
+                    })
+                });
+
+                const tokenResponse = await fetch('https://api.mail.tm/token', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        address: email,
+                        password: 'password'
+                    })
+                });
+                const tokenData = await tokenResponse.json();
+                const token = tokenData.token;
+
+                const emails = JSON.parse(localStorage.getItem('temp_emails')) || [];
+                emails.push({ email, token });
+                localStorage.setItem('temp_emails', JSON.stringify(emails));
+
+                updateEmailSelect();
+
+            } catch (error) {
+                console.error('Error creating temporary email:', error);
+                document.getElementById('current-email').innerText = 'حدث خطأ أثناء إنشاء البريد الإلكتروني المؤقت.';
+            }
+        }
+
+        function makeLinksClickable(text) {
+            const urlPattern = /(https?:\/\/[^\s]+)/g;
+            return text.replace(urlPattern, '<a href="$1" target="_blank">$1</a>');
+        }
+
+        async function checkEmails() {
+            try {
+                const emailSelect = document.getElementById('emails');
+                const selectedEmail = emailSelect.value;
+
+                const emails = JSON.parse(localStorage.getItem('temp_emails')) || [];
+                const emailData = emails.find(e => e.email === selectedEmail);
+
+                if (!emailData) {
+                    alert('يرجى إنشاء بريد إلكتروني مؤقت أولاً');
+                    return;
+                }
+
+                const messagesResponse = await fetch('https://api.mail.tm/messages', {
+                    headers: {
+                        'Authorization': `Bearer ${emailData.token}`
+                    }
+                });
+                const messagesData = await messagesResponse.json();
+                const messages = messagesData['hydra:member'];
+                const messageContainer = document.getElementById('message-container');
+                messageContainer.innerHTML = '';
+
+                if (messages.length === 0) {
+                    messageContainer.innerHTML = '<div class="message">لا توجد رسائل بعد</div>';
+                } else {
+                    messages.forEach(async message => {
+                        const messageDetailResponse = await fetch(`https://api.mail.tm/messages/${message.id}`, {
+                            headers: {
+                                'Authorization': `Bearer ${emailData.token}`
+                            }
+                        });
+                        const messageDetail = await messageDetailResponse.json();
+                        const content = messageDetail.text ? makeLinksClickable(messageDetail.text) : makeLinksClickable(messageDetail.html);
+                        const messageDiv = document.createElement('div');
+                        messageDiv.classList.add('message');
+                        messageDiv.innerHTML = `
+                            <strong>من:</strong> ${message.from.address} <br>
+                            <strong>الموضوع:</strong> ${message.subject} <br>
+                            <strong>المحتوى:</strong> <div>${content}</div>
+                        `;
+                        messageContainer.appendChild(messageDiv);
+                    });
+                }
+            } catch (error) {
+                console.error('Error fetching emails:', error);
+                alert('حدث خطأ أثناء جلب الرسائل.');
+            }
+        }
+
+        function loadSavedEmails() {
+            const emails = JSON.parse(localStorage.getItem('temp_emails')) || [];
+            if (emails.length > 0) {
+                document.getElementById('current-email').innerText = emails[emails.length - 1].email;
+            }
+            updateEmailSelect();
+        }
+
+        function updateEmailSelect() {
+            const emails = JSON.parse(localStorage.getItem('temp_emails')) || [];
+            const emailSelect = document.getElementById('emails');
+            emailSelect.innerHTML = '';
+            emails.forEach(emailData => {
+                const option = document.createElement('option');
+                option.value = emailData.email;
+                option.text = emailData.email;
+                emailSelect.appendChild(option);
+            });
+        }
+
+        function switchEmail() {
+            const emailSelect = document.getElementById('emails');
+            const selectedEmail = emailSelect.value;
+            document.getElementById('current-email').innerText = selectedEmail;
+        }
+
+        function copyToClipboard() {
+            const emailText = document.getElementById('current-email').innerText;
+            navigator.clipboard.writeText(emailText).then(() => {
+                alert('تم نسخ البريد الإلكتروني إلى الحافظة');
+            }, (err) => {
+                console.error('Could not copy text: ', err);
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', (event) => {
+            fetchDomains();
+            loadSavedEmails();
+            setInterval(checkEmails, 60000);
+        });
+    </script>
+</head>
+<body>
+    <div class="box">
+        <h1>البريد الإلكتروني المؤقت الخاص بك:</h1>
+        <select id="domain"></select>
+        <button onclick="getTempEmail()">إنشاء بريد إلكتروني مؤقت</button>
+        <p id="current-email">لم يتم إنشاء البريد الإلكتروني بعد</p>
+        <select id="emails" onchange="switchEmail()"></select>
+        <button onclick="checkEmails()">تحقق من الرسائل</button>
+        <button onclick="copyToClipboard()">نسخ البريد الإلكتروني</button>
+    </div>
+    <h2>الرسائل الواردة:</h2>
+    <div id="message-container" class="message-container">
+        <div class="message">لا توجد رسائل بعد</div>
+    </div>
+    <div class="footer">
+        <p>created & programming  site web by Salvatore </p>
+        <p>Instagram account<a href="https://www.instagrama.com/6ec_0" target="_blank">@6ec_0</a></p>
+    </div>
+
+</body></html>
